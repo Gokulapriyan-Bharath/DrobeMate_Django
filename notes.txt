@@ -1,0 +1,32 @@
+#Check python version
+Python -V
+
+#Install virtual env
+python3 -m venv drobe_env
+
+#Check pip version
+pip -V
+
+#Install Django 4.2
+pip install "Django>=4.2,<5.0"
+
+#To Generate requirements.txt
+pip freeze > requirements.txt
+
+
+#you can check django-admin commands
+django-admin
+
+# Create project
+django-admin startproject drobemate_backend
+
+# create app
+python manage.py startapp users
+
+
+#to make models to generate migration files
+python3 manage.py makemigrations
+
+# apply the changes to DB
+python3 manage.py migrate
+
