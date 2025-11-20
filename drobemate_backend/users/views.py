@@ -16,18 +16,6 @@ class SignupView(APIView):
             "password": request.data.get("password"),
         }
 
-        # 1️⃣ Required field validation
-        missing_fields = [field for field, value in data.items() if not value]
-        if missing_fields:
-            return api_response(
-                success=False,
-                message=f"{', '.join(missing_fields)} is required"
-            )
-
-        # 2️⃣ Email validation (Fast regex)
-        if not re.fullmatch(r"[^@]+@[^@]+\.[^@]+", data["email"]):
-            return api_response(success=False, message="Invalid email format")
-
         # 3️⃣ Password validation
         password = data["password"]
         if len(password) < 8:
@@ -35,9 +23,6 @@ class SignupView(APIView):
         if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
             return api_response(success=False, message="Password must contain at least one special character")
 
-        # 4️⃣ Duplicate email check (fast)
-        if User.objects.filter(email=data["email"]).exists():
-            return api_response(success=False, message="Email already exists")
 
         # 5️⃣ Create user
         serializer = UserSerializer(data=data)

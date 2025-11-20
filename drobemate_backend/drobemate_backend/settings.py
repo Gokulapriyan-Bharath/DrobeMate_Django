@@ -26,7 +26,8 @@ load_dotenv()
 SECRET_KEY = 'django-insecure-s)3$8t%p#9h@!s-0kqc6l#!ugv^g6f&$hwe!pvv%#=c233thyi'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG") == "True"
+
 
 ALLOWED_HOSTS = []
 
@@ -94,6 +95,7 @@ DATABASES = {
         'PASSWORD': DB_PASSWORD,
         'HOST': DB_HOST,
         'PORT': DB_PORT,
+        'CONN_MAX_AGE': 60,
     }
 }
 
@@ -155,3 +157,9 @@ CORS_ALLOW_HEADERS = [
     "accept",
     "origin",
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
