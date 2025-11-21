@@ -1,6 +1,7 @@
 from rest_framework.response import Response
+from rest_framework import status
 
-def api_response(success: bool, message: str, data=None, status_code=200):
+def api_response(success: bool, message: str, data=None, status_code=status.HTTP_200_OK):
     """
     Standardized API response for both success and error.
 
