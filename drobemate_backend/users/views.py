@@ -16,6 +16,15 @@ class SignupView(APIView):
             "password": request.data.get("password"),
         }
 
+        # Required field validations
+        required_fields = ["first_name", "last_name", "email", "password"]
+        for field in required_fields:
+            if not data[field]:
+                return api_response(
+                    success=False,
+                    message=f"{field.replace('_', ' ').title()} is required"
+                )
+
         # 3️⃣ Password validation
         password = data["password"]
         if len(password) < 8:
@@ -59,7 +68,7 @@ class LoginView(APIView):
             return api_response(True, "Login successful", data = {"token": token, "expires_in": 86400})
 
         except User.DoesNotExist:
-            return api_response(False, "User not found", None)
+            return api_response(False, "User not found", None )
 
 
 class LogoutView(APIView):
