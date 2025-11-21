@@ -3,6 +3,7 @@ from .serializers import UserSerializer, User,BlacklistedToken
 from .functions import api_response, status
 from django.contrib.auth.hashers import check_password
 from .utils import generate_jwt, decode_jwt, is_token_blacklisted, get_token_from_header, re
+from .decorators import login_required
 
 
 class SignupView(APIView):
@@ -72,6 +73,7 @@ class LoginView(APIView):
 
 
 class LogoutView(APIView):
+    @login_required
     def post(self, request):
         token = get_token_from_header(request)
         if not token:
@@ -84,6 +86,7 @@ class LogoutView(APIView):
 
 
 class VerifyTokenView(APIView):
+    @login_required
     def get(self, request):
         token = get_token_from_header(request)
 
@@ -105,3 +108,18 @@ class VerifyTokenView(APIView):
         serializer = UserSerializer(user)
 
         return api_response(True, "Token valid", data=serializer.data, status_code=status.HTTP_200_OK)
+
+
+class UpdateProfileImageView(APIView):
+    @login_required
+    def put(self, request):
+        user = request.user   # user is attached by the decorator
+        profile_image = request.data.get("profile_image")
+
+        if not profile_image:
+            return api_response(False, "Profile image is required",status_code = status.HTTP_400_BAD_REQUEST)
+
+        user.profile_image = profile_image
+        user.save()
+
+        return api_response(True, "Profile image updated", UserSerializer(user).data)
