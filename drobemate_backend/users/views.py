@@ -76,7 +76,8 @@ class LogoutView(APIView):
         token = get_token_from_header(request)
         if not token:
             return api_response(False, "Token missing", status.HTTP_401_UNAUTHORIZED)
-        if is_token_blacklisted:
+        is_blacklisted = is_token_blacklisted(token)
+        if is_blacklisted:
             return api_response(False, "Logged out already", status.HTTP_400_BAD_REQUEST)
         BlacklistedToken.objects.create(token=token)
         return api_response(True, "Logged out successfully")
