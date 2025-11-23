@@ -38,10 +38,11 @@ class SignupView(APIView):
 
         if serializer.is_valid():
             user = serializer.save()
+
             return api_response(
                 success = True,
                 message = "User created successfully",
-                data = UserSerializer(user).data,
+                data =  {"token": generate_jwt(UserSerializer(user).data["user_id"])},
                 status_code = status.HTTP_201_CREATED
             )
 
@@ -66,7 +67,7 @@ class LoginView(APIView):
 
             token = generate_jwt(user.pk)
 
-            return api_response(True, "Login successful", data = {"token": token, "expires_in": 86400})
+            return api_response(True, "Login successful", data = {"token": token})
 
         except User.DoesNotExist:
             return api_response(False, "User not found", None )
