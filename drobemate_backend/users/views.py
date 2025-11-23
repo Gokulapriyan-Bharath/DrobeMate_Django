@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from .serializers import UserSerializer, User,BlacklistedToken, make_password
-from .functions import api_response, status
+from .functions import api_response, status, validate_password
 from django.contrib.auth.hashers import check_password
 from .utils import generate_jwt, decode_jwt, is_token_blacklisted, get_token_from_header, re
 from .decorators import login_required
@@ -23,16 +23,13 @@ class SignupView(APIView):
             if not data[field]:
                 return api_response(
                     success=False,
-                    message=f"{field.replace('_', ' ').title()} is required",
-                    status_code=status.HTTP_400_BAD_REQUEST
-                )
+                    message=f"{field.replace('_', ' ').title()} is required",status_code = status.HTTP_400_BAD_REQUEST)
 
         # 3️⃣ Password validation
         password = data["password"]
-        if len(password) < 8:
-            return api_response(success = False, message = "Password must be at least 8 characters")
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-            return api_response(success = False, message = "Password must contain at least one special character")
+        valid, msg = validate_password(password)
+        if not valid:
+            return api_response(False, message = msg,status_code = status.HTTP_400_BAD_REQUEST)
 
         # 5️⃣ Create user
         serializer = UserSerializer(data = data)
@@ -64,14 +61,14 @@ class LoginView(APIView):
         try:
             user = User.objects.get(email = email)
             if not check_password(password, user.password):
-                return api_response(False, "Invalid password", None)
+                return api_response(False, "Invalid password", None,status_code = status.HTTP_400_BAD_REQUEST)
 
             token = generate_jwt(user.pk)
 
             return api_response(True, "Login successful", data = {"token": token})
 
         except User.DoesNotExist:
-            return api_response(False, "User not found", None )
+            return api_response(False, "User not found", None,status_code = status.HTTP_400_BAD_REQUEST )
 
 
 class LogoutView(APIView):
@@ -79,10 +76,10 @@ class LogoutView(APIView):
     def post(self, request):
         token = get_token_from_header(request)
         if not token:
-            return api_response(False, "Token missing", status.HTTP_401_UNAUTHORIZED)
+            return api_response(False, "Token missing",status_code = status.HTTP_401_UNAUTHORIZED)
         is_blacklisted = is_token_blacklisted(token)
         if is_blacklisted:
-            return api_response(False, "Logged out already", status.HTTP_400_BAD_REQUEST)
+            return api_response(False, "Logged out already",status_code = status.HTTP_400_BAD_REQUEST)
         BlacklistedToken.objects.create(token=token)
         return api_response(True, "Logged out successfully")
 
@@ -148,3 +145,32 @@ class UpdateUserView(APIView):
         serializer.save()
 
         return api_response(True, "User Updated successfully", UserSerializer(user).data)
+
+
+class ResetPasswordView(APIView):
+    @login_required
+    def patch(self, request):
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+
+        # Validate new password using reusable function
+        valid, msg, status_code = validate_password(new_password)
+        if not valid:
+            return api_response(False, message = msg,status_code = status_code)
+
+        if not old_password or not new_password:
+            return api_response(False, "Both fields are required", status_code = status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+
+        # Check old password
+        if not check_password(old_password, user.password):
+            return api_response(False, "Old password is incorrect", status_code=status.HTTP_400_BAD_REQUEST)
+
+
+
+        # Update password
+        user.password = make_password(new_password)
+        user.save()
+
+        return api_response(True, "Password updated successfully")
