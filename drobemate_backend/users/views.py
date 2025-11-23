@@ -1,5 +1,5 @@
 from rest_framework.views import APIView
-from .serializers import UserSerializer, User,BlacklistedToken
+from .serializers import UserSerializer, User,BlacklistedToken, make_password
 from .functions import api_response, status
 from django.contrib.auth.hashers import check_password
 from .utils import generate_jwt, decode_jwt, is_token_blacklisted, get_token_from_header, re
@@ -23,7 +23,8 @@ class SignupView(APIView):
             if not data[field]:
                 return api_response(
                     success=False,
-                    message=f"{field.replace('_', ' ').title()} is required"
+                    message=f"{field.replace('_', ' ').title()} is required",
+                    status_code=status.HTTP_400_BAD_REQUEST
                 )
 
         # 3️⃣ Password validation
@@ -124,3 +125,29 @@ class UpdateProfileImageView(APIView):
         user.save()
 
         return api_response(True, "Profile image updated", UserSerializer(user).data)
+
+
+class UpdateUserView(APIView):
+    """Allows the logged-in user to update their details."""
+
+    @login_required
+    def patch(self, request):
+        user = request.user   # user is attached by the decorator
+        first_name = request.data.get("first_name")
+        last_name = request.data.get("last_name")
+        email = request.data.get("email")
+
+        data = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email
+        }
+
+        serializer = UserSerializer(user, data=data, partial=True)
+
+        if not serializer.is_valid():
+            return api_response(False, serializer.errors, status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+
+        return api_response(True, "User Updated successfully", UserSerializer(user).data)
