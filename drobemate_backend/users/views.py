@@ -133,14 +133,11 @@ class UpdateUserView(APIView):
     @login_required
     def patch(self, request):
         user = request.user   # user is attached by the decorator
-        first_name = request.data.get("first_name")
-        last_name = request.data.get("last_name")
-        email = request.data.get("email")
 
         data = {
-            "first_name": first_name,
-            "last_name": last_name,
-            "email": email
+            "first_name": request.data.get("first_name"),
+            "last_name": request.data.get("last_name"),
+            "email": request.data.get("email")
         }
 
         serializer = UserSerializer(user, data=data, partial=True)
