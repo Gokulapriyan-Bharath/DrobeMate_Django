@@ -159,3 +159,22 @@ CORS_ALLOW_HEADERS = [
     "accept",
     "origin",
 ]
+
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend"  # default
+)
+EMAIL_HOST = os.environ.get("EMAIL_HOST")
+EMAIL_PORT = os.environ.get("EMAIL_PORT")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+
+
+TEMPLATES[0]['DIRS'].append(
+    os.path.join(BASE_DIR, 'users', 'email', 'templates')
+)
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'users', 'email', 'static'),
+]

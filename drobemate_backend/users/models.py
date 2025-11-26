@@ -1,5 +1,7 @@
-import uuid
+import uuid,datetime
 from django.db import models
+from django.utils import timezone
+
 
 class User(models.Model):
     user_id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
@@ -17,3 +19,13 @@ class User(models.Model):
 class BlacklistedToken(models.Model):
     token = models.TextField()
     blacklisted_at = models.DateTimeField(auto_now_add=True)
+
+
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def expired(self):
+        return timezone.now() > self.created_at + datetime.timedelta(minutes=5)

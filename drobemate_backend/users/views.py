@@ -1,9 +1,10 @@
 from rest_framework.views import APIView
-from .serializers import UserSerializer, User,BlacklistedToken, make_password
-from .functions import api_response, status, validate_password
+from .serializers import UserSerializer, User,BlacklistedToken, make_password, PasswordResetOTP
+from .functions import api_response, status, validate_password,send_mail,render_to_string,get_current_site,EmailMessage
 from django.contrib.auth.hashers import check_password
-from .utils import generate_jwt, decode_jwt, is_token_blacklisted, get_token_from_header, re
+from .utils import generate_jwt, decode_jwt, is_token_blacklisted, get_token_from_header
 from .decorators import login_required
+import random
 
 
 class SignupView(APIView):
@@ -174,3 +175,42 @@ class ResetPasswordView(APIView):
         user.save()
 
         return api_response(True, "Password updated successfully")
+
+class ForgotPasswordOTPView(APIView):
+    def post(self, request ):
+        email = request.data.get('email')
+        if not email:
+            return api_response(False,'Email is Required',data = None,status_code = status.HTTP_400_BAD_REQUEST)
+
+        try :
+            user = User.objects.get(email=email)
+        except:
+            return api_response(False, "User not found",data=None, status_code = status.HTTP_404_NOT_FOUND)
+
+        otp = str(random.randint(100000, 999999))
+
+        PasswordResetOTP.objects.create(user = user, otp = otp)
+
+        # Build absolute URL for logo (recommended for email clients)
+        domain = get_current_site(request).domain
+        logo_url = f"https://{domain}/static/images/drobemate_logo.png"
+
+        # Render HTML email template
+        html_content = render_to_string("otp_email.html", {
+            "username": f"{user.first_name} {user.last_name}",
+            "otp": otp,
+            "expiry": "5 minutes",
+            "logo": logo_url,
+        })
+
+        # Send HTML email
+        email_message = EmailMessage(
+            subject="DrobeMate Password Reset OTP",
+            body=html_content,
+            from_email="no-reply@drobemate.com",
+            to=[email],
+        )
+        email_message.content_subtype = "html"   # IMPORTANT: tells Django this is HTML
+        email_message.send()
+
+        return api_response(True,"OTP sent to your email",None,status_code =status.HTTP_200_OK)

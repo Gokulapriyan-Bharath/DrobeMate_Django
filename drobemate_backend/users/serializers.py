@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User,BlacklistedToken
+from .models import User,BlacklistedToken,PasswordResetOTP
 from django.contrib.auth.hashers import make_password
 
 class UserSerializer(serializers.ModelSerializer):
@@ -23,3 +23,12 @@ class UserSerializer(serializers.ModelSerializer):
         validated_data['password'] = make_password(password)  # hash and assign
         user = User.objects.create(**validated_data)
         return user
+
+
+
+
+class PasswordResetOTPSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PasswordResetOTP
+        fields = ['id', 'user', 'otp', 'created_at']
+        read_only_fields = ['id', 'created_at']

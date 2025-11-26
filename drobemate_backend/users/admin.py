@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User,BlacklistedToken
+from .models import User,BlacklistedToken,PasswordResetOTP
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -10,3 +10,8 @@ class UserAdmin(admin.ModelAdmin):
 class BlacklistedTokenAdmin(admin.ModelAdmin):
     list_display = ('token','blacklisted_at')
     search_fields = ('token','blacklisted_at')
+
+@admin.register(PasswordResetOTP)
+class PasswordRestOTPAdmin(admin.ModelAdmin):
+    list_display = ('user','otp','created_at')
+    search_fields = ('user','otp')
