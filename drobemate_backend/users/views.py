@@ -214,3 +214,69 @@ class ForgotPasswordOTPView(APIView):
         email_message.send()
 
         return api_response(True,"OTP sent to your email",None,status_code =status.HTTP_200_OK)
+
+class VerifyOTPView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
+
+        if not email or not otp:
+            return api_response(False,"Email and OTP are required",None,status.HTTP_400_BAD_REQUEST)
+
+        try:
+            otp_entry = PasswordResetOTP.objects.get(user__email=email, otp=otp)
+        except PasswordResetOTP.DoesNotExist:
+            return api_response(False,"Invalid email or OTP",None,status.HTTP_400_BAD_REQUEST)
+
+        # Check expiration
+        if otp_entry.expired:
+            otp_entry.delete()
+            return api_response(False,"OTP expired. Please request a new one.",None,status.HTTP_400_BAD_REQUEST)
+
+        return api_response(True,"OTP is valid",None, status.HTTP_200_OK)
+
+
+class ResetPasswordUsingOTPView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
+        new_password = request.data.get("password")
+
+        # 1. Validate fields
+        if not email or not otp or not new_password:
+            return api_response(
+                False,
+                "Email, OTP, and new password are required",
+                None,
+                status.HTTP_400_BAD_REQUEST
+            )
+
+        # 2. Validate user
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return api_response(False, "User not found", None, status.HTTP_404_NOT_FOUND)
+
+        # 3. Validate OTP entry
+        try:
+            otp_entry = PasswordResetOTP.objects.get(user=user, otp=otp)
+        except PasswordResetOTP.DoesNotExist:
+            return api_response(False, "Invalid OTP", None, status.HTTP_400_BAD_REQUEST)
+
+        # 4. Check if OTP expired
+        if otp_entry.expired:
+            otp_entry.delete()
+            return api_response(False, "OTP expired. Request a new one.", None, status.HTTP_400_BAD_REQUEST)
+
+        # 5. Validate password strength
+        valid, msg = validate_password(new_password)
+        if not valid:
+            return api_response(False, msg, None, status_code = status.HTTP_400_BAD_REQUEST)
+
+        user.password = make_password(new_password)
+        user.save()
+
+        # 7. Delete OTP after success
+        otp_entry.delete()
+
+        return api_response(True, "Password reset successfully", None, status.HTTP_200_OK)
