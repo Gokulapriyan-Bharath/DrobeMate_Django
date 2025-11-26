@@ -4,7 +4,8 @@ from .functions import api_response, status, validate_password,send_mail,render_
 from django.contrib.auth.hashers import check_password
 from .utils import generate_jwt, decode_jwt, is_token_blacklisted, get_token_from_header
 from .decorators import login_required
-import random
+import random,datetime
+from django.utils import timezone
 
 
 class SignupView(APIView):
@@ -53,7 +54,6 @@ class SignupView(APIView):
             status_code = status.HTTP_400_BAD_REQUEST
         )
 
-
 class LoginView(APIView):
     def post( self, request ):
         email = request.data.get("email")
@@ -71,7 +71,6 @@ class LoginView(APIView):
         except User.DoesNotExist:
             return api_response(False, "User not found", None,status_code = status.HTTP_400_BAD_REQUEST )
 
-
 class LogoutView(APIView):
     @login_required
     def post(self, request):
@@ -83,7 +82,6 @@ class LogoutView(APIView):
             return api_response(False, "Logged out already",status_code = status.HTTP_400_BAD_REQUEST)
         BlacklistedToken.objects.create(token=token)
         return api_response(True, "Logged out successfully")
-
 
 class VerifyTokenView(APIView):
     @login_required
@@ -109,7 +107,6 @@ class VerifyTokenView(APIView):
 
         return api_response(True, "Token valid", data=serializer.data, status_code=status.HTTP_200_OK)
 
-
 class UpdateProfileImageView(APIView):
     @login_required
     def put(self, request):
@@ -123,7 +120,6 @@ class UpdateProfileImageView(APIView):
         user.save()
 
         return api_response(True, "Profile image updated", UserSerializer(user).data)
-
 
 class UpdateUserView(APIView):
     """Allows the logged-in user to update their details."""
@@ -146,7 +142,6 @@ class UpdateUserView(APIView):
         serializer.save()
 
         return api_response(True, "User Updated successfully", UserSerializer(user).data)
-
 
 class ResetPasswordView(APIView):
     @login_required
@@ -186,6 +181,22 @@ class ForgotPasswordOTPView(APIView):
             user = User.objects.get(email=email)
         except:
             return api_response(False, "User not found",data=None, status_code = status.HTTP_404_NOT_FOUND)
+
+        # ---------- RATE LIMIT: MAX 3 OTP / HOUR ----------
+        one_hour_ago = timezone.now() - datetime.timedelta(hours=1)
+        otp_count_last_hour = PasswordResetOTP.objects.filter(
+            user=user,
+            created_at__gte=one_hour_ago
+        ).count()
+
+        if otp_count_last_hour >= 3:
+            return api_response(
+                False,
+                "You have reached the maximum OTP requests (3 per hour). Please try again later.",
+                None,
+                status.HTTP_429_TOO_MANY_REQUESTS
+            )
+        # -----------------------------------------------------
 
         otp = str(random.randint(100000, 999999))
 
@@ -234,7 +245,6 @@ class VerifyOTPView(APIView):
             return api_response(False,"OTP expired. Please request a new one.",None,status.HTTP_400_BAD_REQUEST)
 
         return api_response(True,"OTP is valid",None, status.HTTP_200_OK)
-
 
 class ResetPasswordUsingOTPView(APIView):
     def post(self, request):
